@@ -1,0 +1,46 @@
+---
+title: "Regression Models Project"
+output: pdf_document
+---
+This project uses regression in R to address the following re the mtcars dataset: (1)If automatic or manual transmission is better for MPG, and (2) A quantification of the MPG difference between automatic and manual transmissions.
+```{r}
+library(datasets)
+data(mtcars)
+attach(mtcars)
+fit1 <- lm(mpg ~ cyl + disp + hp + drat + wt + qsec + vs + am + gear + carb)
+confint(fit1)
+```
+confint(fit1)'s output suggests candidates for elimination from an updated model: cyl, drat, vs, gear, and carb have 95% confidence intervals split relatively evenly by the number 0, unlike wt, whose interval lies mostly on one side.
+```{r}
+fit2 <- lm(mpg ~ disp + hp + wt + qsec + am)
+confint(fit2)
+```
+We can compare fit1 and fit2 using anova() and the AIC.
+```{r}
+anova(fit2, fit1)
+AIC(fit1, fit2)
+```
+Both tests favor fit2: anova because the testing added by the discarded variables to the linear prediction is insignificant (since p = 0.97); AIC because the AIC value for fit2 is much smaller than for fit1.  confint(fit2) reveals that the beta coefficients for disp and hp are to p > 95% not big enough to have a noticeable effect on mpg.
+```{r}
+fit3 <- lm(mpg ~ wt + qsec + am)
+confint(fit3)
+```
+Finally, we should consider interactions among the explaning variables in fit3.  For brevity's sake, we first find the correlations among the variables as a general measure of each pair's interactivity.
+```{r}
+cor(wt, qsec)
+cor(wt, am)
+cor(qsec, am)
+```
+The only pair that we should integrate into the model is wt:am (because magnitude of cor(wt,am) much higher than other two values).
+```{r}
+fit4 <- lm(mpg ~ wt + qsec + am + wt:am)
+summary(fit4)[8:9]
+```
+summary(fit4) supports the choice of fit4 in that the un-adjusted R-squared value is 0.89 (adjusted, 0.88), thereby suggesting that fit4 "explans" about that proportion of the total variance from the population mean.
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(fit4)
+```
+
+
+
