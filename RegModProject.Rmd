@@ -1,9 +1,21 @@
 ---
 title: "Regression Models Project"
-output: pdf_document
+fontsize: 9pt
+date: "February 22, 2015"
+output:
+  pdf_document:
+    fig_caption: yes
+    fig_height: 7
+    fig_width: 7
+geometry: margin=0.60in
 ---
-This project uses regression in R to address the following re the mtcars dataset: (1)If automatic or manual transmission is better for MPG, and (2) A quantification of the MPG difference between automatic and manual transmissions.
-```{r}
+## EXECUTIVE SUMMARY
+This project uses regression to address: (1)If automatic or manual transmission is better for MPG, and (2) A quantification of the MPG difference.
+
+Preliminary conclusions: (1)Manual is worse than auto; (2)a rough quantity to represent that conclusion is the coefficient of the "am" variable in the model we end up using.  
+
+Shortcomings: More analysis needs to be done on variable interrelations.  This would lead to a better "relative" importance sort of measure.
+```{r, strip.white=TRUE, collapse=TRUE}
 library(datasets)
 data(mtcars)
 attach(mtcars)
@@ -11,36 +23,65 @@ fit1 <- lm(mpg ~ cyl + disp + hp + drat + wt + qsec + vs + am + gear + carb)
 confint(fit1)
 ```
 confint(fit1)'s output suggests candidates for elimination from an updated model: cyl, drat, vs, gear, and carb have 95% confidence intervals split relatively evenly by the number 0, unlike wt, whose interval lies mostly on one side.
-```{r}
+```{r, strip.white=TRUE, collapse=TRUE}
 fit2 <- lm(mpg ~ disp + hp + wt + qsec + am)
 confint(fit2)
 ```
 We can compare fit1 and fit2 using anova() and the AIC.
-```{r}
+```{r, strip.white=TRUE, collapse=TRUE}
 anova(fit2, fit1)
 AIC(fit1, fit2)
 ```
 Both tests favor fit2: anova because the testing added by the discarded variables to the linear prediction is insignificant (since p = 0.97); AIC because the AIC value for fit2 is much smaller than for fit1.  confint(fit2) reveals that the beta coefficients for disp and hp are to p > 95% not big enough to have a noticeable effect on mpg.
-```{r}
+```{r, strip.white=TRUE, collapse=TRUE}
 fit3 <- lm(mpg ~ wt + qsec + am)
 confint(fit3)
 ```
-Finally, we should consider interactions among the explaning variables in fit3.  For brevity's sake, we first find the correlations among the variables as a general measure of each pair's interactivity.
-```{r}
+Finally, we should consider interactions among the explaning variables in fit3.  For brevity's sake, we find cor(wt,qsec), cor(wt,am), and cor(qsec,am), respectively.
+```{r, echo=FALSE, strip.white=TRUE, collapse=TRUE}
 cor(wt, qsec)
 cor(wt, am)
 cor(qsec, am)
 ```
-The only pair that we should integrate into the model is wt:am (because magnitude of cor(wt,am) much higher than other two values).
-```{r}
+The only pair that we should integrate include is wt:am (because magnitude of cor(wt,am) much higher than other two).
+```{r, strip.white=TRUE, collapse=TRUE}
 fit4 <- lm(mpg ~ wt + qsec + am + wt:am)
 summary(fit4)[8:9]
 ```
-summary(fit4) supports the choice of fit4 in that the un-adjusted R-squared value is 0.89 (adjusted, 0.88), thereby suggesting that fit4 "explans" about that proportion of the total variance from the population mean.
-```{r, echo=FALSE}
+summary(fit4) supports the choice of fit4 in that the un-adjusted R-squared value is 0.89 (adjusted, 0.88), which suggests fit4 "explains" about that proportion of the total variance from the population mean.
+
+Some diagnostic info (consider along with figures in appendix)
+```{r,results='hide', strip.white=TRUE, collapse=TRUE}
+dfb <- dfbetas(fit4)
+dfbHigh <- dfb > 1 | dfb < -1
+```
+dfbHigh is just a logical vector that says whether an entry in fit4 is greater than 1 or less than -1.
+```{r, strip.white=TRUE, collapse=TRUE}
+sum(dfbHigh)
+```
+So each entry in dfbHigh was FALSE, i.e., dfbetas(fit4)'s values were all within (-1,1).
+```{r, strip.white=TRUE, collapse=TRUE}
+summary(fit4)$coef
+```
+The estimated coefficient for am in fit4 is by far the highest.  So we'd expect that going from 0 ("manual") to 1 ("auto") would increase mpg by about 14.1.
+
+\pagebreak
+PAIRWISE PLOTS  
+```{r, echo=FALSE, fig.height=6.5, fig.width=6.5}
+require(stats); require(graphics)
+pairs(mtcars, panel = panel.smooth, main = "Motor Trend Cars")
+```
+
+\pagebreak  
+REGRESSION DIAGNOSTICS  
+```{r, echo=FALSE, fig.width = 6.5, fig.height = 5}
 par(mfrow=c(2,2))
 plot(fit4)
 ```
 
-
+Another representation of the Residuals vs. Leverage figure  
+```{r, echo=FALSE, fig.width = 6.5, fig.height = 4}
+library(car)
+influencePlot(fit4, id.method="identify", main="Influence Plot", sub="Circle size proportional to Cook's distance")
+```
 
